@@ -208,7 +208,7 @@ const LOGOS = {
 // ---------------------------------------------------------------------------
 
 const PROJECT_ROOT = __dirname;
-const DIST_DIR = path.join(PROJECT_ROOT, 'dist');
+const DIST_DIR = path.join(PROJECT_ROOT, 'docs');
 const DIST_NOTES_DIR = path.join(DIST_DIR, 'notes');
 
 // 1. Clean dist/
@@ -366,4 +366,4 @@ if (fs.existsSync(imagesSource)) {
 // 8. Summary
 // ---------------------------------------------------------------------------
 
-console.log(`Built ${builtNotes.length} notes, output at dist/`);
+console.log(`Built ${builtNotes.length} notes, output at docs/`);
