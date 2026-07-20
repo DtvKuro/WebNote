@@ -1378,16 +1378,41 @@ button {
   display: flex;
 }
 
-.toc-toggle {
-  display: inline-flex;
+.toc-item--has-children {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  font-size: 0.625rem;
-  margin-right: 0.35rem;
-  transition: transform 0.2s;
-  cursor: pointer;
 }
 
-.toc-item--expanded > .toc-link > .toc-toggle {
+.toc-item--has-children > .toc-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.toc-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 0.625rem;
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: background-color 0.15s;
+}
+
+.toc-toggle::before {
+  content: '\25B8';
+  transition: transform 0.2s;
+  display: block;
+}
+
+.toc-toggle:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.toc-item--expanded > .toc-toggle::before {
   transform: rotate(90deg);
 }
 
@@ -1399,6 +1424,7 @@ button {
   flex-direction: column;
   gap: 0.125rem;
   margin-top: 0.125rem;
+  width: 100%;
 }
 
 .toc-item--expanded > .toc-sublist {

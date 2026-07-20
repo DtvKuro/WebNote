@@ -405,14 +405,14 @@
             if (!currentSubList) {
               currentSubList = document.createElement('ul');
               currentSubList.className = 'toc-sublist';
-              currentH2Item.appendChild(currentSubList);
 
-              // Add toggle arrow to the parent h2 item
               const toggle = document.createElement('span');
               toggle.className = 'toc-toggle';
-              toggle.textContent = '\u25B8';
+
               const parentItem = currentH2Item;
-              parentItem.querySelector('.toc-link').prepend(toggle);
+              parentItem.classList.add('toc-item--has-children');
+              parentItem.appendChild(toggle);
+              parentItem.appendChild(currentSubList);
 
               toggle.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -438,14 +438,16 @@
 
         const tocLinks = toc.querySelectorAll('.toc-link');
 
-        // Scroll heading to center of viewport on TOC click
+        // Scroll heading below the sticky nav with padding
         tocLinks.forEach(link => {
           link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetId = link.getAttribute('href').slice(1);
             const target = document.getElementById(targetId);
             if (target) {
-              const y = target.getBoundingClientRect().top + window.scrollY - (window.innerHeight / 2) + (target.offsetHeight / 2);
+              const navHeight = 56;
+              const padding = 24;
+              const y = target.getBoundingClientRect().top + window.scrollY - navHeight - padding;
               window.scrollTo({ top: y, behavior: 'smooth' });
               history.pushState(null, '', '#' + targetId);
             }
@@ -462,12 +464,6 @@
                 );
                 if (activeLink) {
                   activeLink.classList.add('toc-link--active');
-
-                  // Auto-expand parent if active link is inside a sublist
-                  const parentH2Item = activeLink.closest('.toc-sublist')?.closest('.toc-item--h2');
-                  if (parentH2Item) {
-                    parentH2Item.classList.add('toc-item--expanded');
-                  }
                 }
               }
             });
