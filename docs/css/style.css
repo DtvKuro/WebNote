@@ -1378,18 +1378,13 @@ button {
   display: flex;
 }
 
-.toc-heading-glow {
-  background-color: var(--accent-bg);
-  border-radius: 4px;
-  box-shadow: 0 0 12px var(--accent-glow);
-  transition: background-color 0.3s, box-shadow 0.3s;
-  animation: toc-glow-fade 2s ease-out forwards;
+.note-content h2,
+.note-content h3 {
+  transition: text-shadow 0.5s ease-out;
 }
 
-@keyframes toc-glow-fade {
-  0% { background-color: var(--accent-bg); box-shadow: 0 0 12px var(--accent-glow); }
-  70% { background-color: var(--accent-bg); box-shadow: 0 0 12px var(--accent-glow); }
-  100% { background-color: transparent; box-shadow: none; }
+.toc-heading-glow {
+  text-shadow: 0 0 12px #facc15, 0 0 24px #facc1580;
 }
 
 .toc-item--has-children {
@@ -1409,7 +1404,7 @@ button {
   justify-content: center;
   width: 20px;
   height: 20px;
-  font-size: 0.625rem;
+  font-size: 0.875rem;
   cursor: pointer;
   border-radius: 3px;
   flex-shrink: 0;

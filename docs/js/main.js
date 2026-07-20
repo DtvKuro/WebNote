@@ -137,7 +137,8 @@
     if (!target) return;
 
     e.preventDefault();
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const y = target.getBoundingClientRect().top + window.scrollY - (window.innerHeight / 2) + (target.offsetHeight / 2);
+    window.scrollTo({ top: y, behavior: 'smooth' });
   });
 
   // ============================================================
@@ -438,42 +439,83 @@
 
         const tocLinks = toc.querySelectorAll('.toc-link');
 
-        // Scroll heading below the sticky nav with padding
+        // Scroll heading to center and force active state on click
         tocLinks.forEach(link => {
           link.addEventListener('click', (e) => {
             e.preventDefault();
             const targetId = link.getAttribute('href').slice(1);
             const target = document.getElementById(targetId);
             if (target) {
+              // Force this heading as active immediately
+              clickedHeadingId = targetId;
+              tocLinks.forEach(l => l.classList.remove('toc-link--active'));
+              link.classList.add('toc-link--active');
+
               const y = target.getBoundingClientRect().top + window.scrollY - (window.innerHeight / 2) + (target.offsetHeight / 2);
               window.scrollTo({ top: y, behavior: 'smooth' });
               history.pushState(null, '', '#' + targetId);
 
-              // Temporary glow on the heading after scroll finishes
+              // Glow starts immediately, fades after scroll lands
+              target.classList.remove('toc-heading-glow');
+              void target.offsetWidth;
               target.classList.add('toc-heading-glow');
-              setTimeout(() => target.classList.remove('toc-heading-glow'), 2000);
+
+              const removeGlow = () => {
+                setTimeout(() => target.classList.remove('toc-heading-glow'), 700);
+                clickedHeadingId = null;
+              };
+
+              // If already at target position, no scroll happens so scrollend won't fire
+              const currentY = Math.round(window.scrollY);
+              const targetY = Math.round(y);
+              if (Math.abs(currentY - targetY) < 2) {
+                removeGlow();
+              } else {
+                window.addEventListener('scrollend', removeGlow, { once: true });
+              }
             }
           });
         });
 
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach(entry => {
-              if (entry.isIntersecting) {
-                tocLinks.forEach(l => l.classList.remove('toc-link--active'));
-                const activeLink = toc.querySelector(
-                  '.toc-link[href="#' + entry.target.id + '"]'
-                );
-                if (activeLink) {
-                  activeLink.classList.add('toc-link--active');
-                }
+        // Track active heading — closest to center, but at top of page use first visible
+        let clickedHeadingId = null;
+
+        const updateActiveHeading = () => {
+          // If a TOC link was just clicked, force that heading active
+          if (clickedHeadingId) return;
+
+          const center = window.innerHeight / 2;
+          let closestHeading = null;
+          let closestDist = Infinity;
+
+          // At top of page, pick the first heading that's visible
+          const firstRect = headings[0].getBoundingClientRect();
+          if (firstRect.top >= 0) {
+            closestHeading = headings[0];
+          } else {
+            headings.forEach(heading => {
+              const rect = heading.getBoundingClientRect();
+              const dist = Math.abs(rect.top - center);
+              if (dist < closestDist) {
+                closestDist = dist;
+                closestHeading = heading;
               }
             });
-          },
-          { rootMargin: '0px 0px -70% 0px', threshold: 0 }
-        );
+          }
 
-        headings.forEach(heading => observer.observe(heading));
+          if (closestHeading) {
+            tocLinks.forEach(l => l.classList.remove('toc-link--active'));
+            const activeLink = toc.querySelector(
+              '.toc-link[href="#' + closestHeading.id + '"]'
+            );
+            if (activeLink) {
+              activeLink.classList.add('toc-link--active');
+            }
+          }
+        };
+
+        window.addEventListener('scroll', updateActiveHeading, { passive: true });
+        updateActiveHeading();
       }
     }
 
