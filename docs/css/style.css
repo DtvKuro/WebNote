@@ -786,7 +786,11 @@ button {
 .note-page {
   max-width: 48rem;
   margin: 0 auto;
-  padding-top: 1.5rem;
+  padding: 1.5rem 40px 30px;
+  background-color: var(--bg-primary);
+  min-height: 100vh;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 20px;
 }
 
 .note-header {
