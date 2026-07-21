@@ -23,10 +23,10 @@ marked.use({
   },
 });
 
+// --- fs helpers ---
+
 function rmrf(dir) {
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+  if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
 }
 
 function mkdirp(dir) {
@@ -37,13 +37,9 @@ function copyDir(src, dest) {
   if (!fs.existsSync(src)) return;
   mkdirp(dest);
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    entry.isDirectory() ? copyDir(s, d) : fs.copyFileSync(s, d);
   }
 }
 
@@ -64,61 +60,52 @@ const MENU_BTN =
   '<span></span><span></span><span></span>' +
   '</button>';
 
-function applyLayout(layout, {
-  pageTitle,
-  basePath,
-  pageType,
-  content,
-  notesMenuToggle = '',
-  notesMenu = '',
-  copyright = '',
-  socialInstagram = '',
-  socialGithub = '',
-  socialFacebook = '',
-}) {
+function applyLayout(layout, vars) {
   return layout
-    .replace(/\{\{PAGE_TITLE\}\}/g, pageTitle)
-    .replace(/\{\{BASE_PATH\}\}/g, basePath)
-    .replace(/\{\{PAGE_TYPE\}\}/g, pageType || '')
-    .replace(/\{\{NOTES_MENU_TOGGLE\}\}/g, notesMenuToggle)
-    .replace(/\{\{NOTES_MENU\}\}/g, notesMenu)
-    .replace(/\{\{COPYRIGHT\}\}/g, copyright)
-    .replace(/\{\{SOCIAL_INSTAGRAM\}\}/g, socialInstagram)
-    .replace(/\{\{SOCIAL_GITHUB\}\}/g, socialGithub)
-    .replace(/\{\{SOCIAL_FACEBOOK\}\}/g, socialFacebook)
-    .replace(/\{\{CONTENT\}\}/g, content);
+    .replace(/\{\{PAGE_TITLE\}\}/g, vars.pageTitle)
+    .replace(/\{\{BASE_PATH\}\}/g, vars.basePath)
+    .replace(/\{\{PAGE_TYPE\}\}/g, vars.pageType || '')
+    .replace(/\{\{NOTES_MENU_TOGGLE\}\}/g, vars.notesMenuToggle || '')
+    .replace(/\{\{NOTES_MENU\}\}/g, vars.notesMenu || '')
+    .replace(/\{\{COPYRIGHT\}\}/g, vars.copyright || '')
+    .replace(/\{\{SOCIAL_INSTAGRAM\}\}/g, vars.socialInstagram || '')
+    .replace(/\{\{SOCIAL_GITHUB\}\}/g, vars.socialGithub || '')
+    .replace(/\{\{SOCIAL_FACEBOOK\}\}/g, vars.socialFacebook || '')
+    .replace(/\{\{CONTENT\}\}/g, vars.content);
 }
 
 function buildNotesMenu(notes, activeSlug, linkPrefix, previewMap) {
   linkPrefix = linkPrefix || '';
   previewMap = previewMap || {};
-  const categoryMap = new Map();
+
+  const cats = new Map();
   for (const n of notes) {
-    if (!categoryMap.has(n.category)) {
-      categoryMap.set(n.category, []);
-    }
-    categoryMap.get(n.category).push(n);
+    if (!cats.has(n.category)) cats.set(n.category, []);
+    cats.get(n.category).push(n);
   }
 
   let html = '';
-  for (const [cat, catNotes] of categoryMap) {
-    const items = catNotes
+  for (const [cat, items] of cats) {
+    const lis = items
       .map((n) => {
-        const nSlug = slugify(n.file);
-        const activeClass = nSlug === activeSlug ? ' active' : '';
-        const preview = previewMap[nSlug] ? ` data-preview="${escapeAttr(previewMap[nSlug])}"` : '';
-        return `<li><a href="${linkPrefix}${nSlug}.html" class="notes-menu-link${activeClass}"${preview}>${n.title}</a></li>`;
+        const s = slugify(n.file);
+        const active = s === activeSlug ? ' active' : '';
+        const preview = previewMap[s] ? ` data-preview="${escapeAttr(previewMap[s])}"` : '';
+        return `<li><a href="${linkPrefix}${s}.html" class="notes-menu-link${active}"${preview}>${n.title}</a></li>`;
       })
       .join('\n        ');
+
     html += `<div class="notes-menu-category">
   <h4 class="notes-menu-category-title">${cat}</h4>
   <ul class="notes-menu-list">
-        ${items}
+        ${lis}
   </ul>
 </div>\n`;
   }
   return html;
 }
+
+// --- SVG logos per note title ---
 
 const LOGOS = {
   'HTML': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" aria-hidden="true"><path fill="#E44D26" d="M19.037 113.876L9.032 1.661h109.936l-10.016 112.198-45.019 12.48z"/><path fill="#F16529" d="M64 116.8l36.378-10.086 8.559-95.878H64z"/><path fill="#EBEBEB" d="M64 52.455H45.788L44.53 38.361H64V24.599H29.489l.33 3.692 3.382 37.927H64zm0 35.743l-.061.017-15.327-4.14-.979-10.975H33.816l1.928 21.609 28.193 7.826.063-.017z"/><path fill="#fff" d="M63.952 52.455v13.763h16.947l-1.597 17.849-15.35 4.143v14.319l28.215-7.82.207-2.325 3.234-36.233.335-3.696h-3.708zm0-27.856v13.762h33.244l.276-3.092.628-6.978.329-3.692z"/></svg>`,
@@ -200,13 +187,17 @@ const LOGOS = {
   </svg>`,
 };
 
-const PROJECT_ROOT = __dirname;
-const DIST_DIR = path.join(PROJECT_ROOT, 'docs');
-const DIST_NOTES_DIR = path.join(DIST_DIR, 'notes');
+// -------------------------------------------------------
+// Build
+// -------------------------------------------------------
 
-rmrf(DIST_DIR);
-mkdirp(DIST_DIR);
-mkdirp(DIST_NOTES_DIR);
+const PROJECT_ROOT = __dirname;
+const DIST = path.join(PROJECT_ROOT, 'docs');
+const DIST_NOTES = path.join(DIST, 'notes');
+
+rmrf(DIST);
+mkdirp(DIST);
+mkdirp(DIST_NOTES);
 
 const config = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'notes.config.json'), 'utf8'));
 const { notes, site } = config;
@@ -231,21 +222,16 @@ for (let i = 0; i < notes.length; i++) {
     continue;
   }
 
-  const mdSource = fs.readFileSync(mdPath, 'utf8');
-  let noteHtml = marked(mdSource);
-
+  const raw = fs.readFileSync(mdPath, 'utf8');
+  let noteHtml = marked(raw);
   noteHtml = noteHtml.replace(/Images\//g, '../images/');
 
-  // Plain text for search index and preview
   const plainText = noteHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  const previewText = plainText.slice(0, 100);
-
   const slug = slugify(note.file);
-  previewMap[slug] = previewText;
+  previewMap[slug] = plainText.slice(0, 100);
 
   const prev = notes[i - 1] || null;
   const next = notes[i + 1] || null;
-
   const prevLink = prev
     ? `<a href="${slugify(prev.file)}.html" class="note-nav-prev">← ${prev.title}</a>`
     : '';
@@ -253,11 +239,7 @@ for (let i = 0; i < notes.length; i++) {
     ? `<a href="${slugify(next.file)}.html" class="note-nav-next">${next.title} →</a>`
     : '';
 
-  // Last updated date from file mtime
   const mtime = fs.statSync(mdPath).mtime;
-  const formattedDate = formatDate(mtime);
-
-  // Version badge
   const versionMarkup = note.version
     ? ` &middot; <span class="note-version-badge">${note.version}</span>`
     : '';
@@ -265,7 +247,7 @@ for (let i = 0; i < notes.length; i++) {
   const noteBody = noteTpl
     .replace(/\{\{CATEGORY\}\}/g, note.category)
     .replace(/\{\{TITLE\}\}/g, note.title)
-    .replace(/\{\{LAST_UPDATED\}\}/g, formattedDate)
+    .replace(/\{\{LAST_UPDATED\}\}/g, formatDate(mtime))
     .replace(/\{\{VERSION_MARKUP\}\}/g, versionMarkup)
     .replace(/\{\{NOTE_CONTENT\}\}/g, noteHtml)
     .replace(/\{\{PREV_LINK\}\}/g, prevLink)
@@ -284,21 +266,18 @@ for (let i = 0; i < notes.length; i++) {
     socialFacebook: site.social.facebook,
   });
 
-  const outPath = path.join(DIST_NOTES_DIR, `${slug}.html`);
-  fs.writeFileSync(outPath, fullPage, 'utf8');
-
+  fs.writeFileSync(path.join(DIST_NOTES, `${slug}.html`), fullPage, 'utf8');
   builtNotes.push({ ...note, slug, plainText });
 }
 
+// group by category for home page
 const categoryMap = new Map();
 for (const note of builtNotes) {
-  if (!categoryMap.has(note.category)) {
-    categoryMap.set(note.category, []);
-  }
+  if (!categoryMap.has(note.category)) categoryMap.set(note.category, []);
   categoryMap.get(note.category).push(note);
 }
 
-// C. Skills banner — one badge per note
+// skills banner
 let skillsBannerHtml = '<div class="skills-banner">';
 for (const note of builtNotes) {
   const svg = LOGOS[note.title] || '';
@@ -306,28 +285,28 @@ for (const note of builtNotes) {
 }
 skillsBannerHtml += '</div>';
 
-// D. Category tabs from config.categoryTabs
+// category tabs
 let categoryTabsHtml = '<div class="category-tabs">';
 for (let i = 0; i < config.categoryTabs.length; i++) {
   const tab = config.categoryTabs[i];
   const label = tab.charAt(0) + tab.slice(1).toLowerCase();
-  const activeClass = i === 0 ? ' active' : '';
-  categoryTabsHtml += `<button class="category-tab${activeClass}" data-filter="${tab}">${label}</button>`;
+  const active = i === 0 ? ' active' : '';
+  categoryTabsHtml += `<button class="category-tab${active}" data-filter="${tab}">${label}</button>`;
 }
 categoryTabsHtml += '</div>';
 
-// E. Category sections with data-category attribute
+// category sections
 let categoriesHtml = '';
 for (const [category, categoryNotes] of categoryMap) {
-  const accentColor = categoryColors[category] || '';
-  const sectionStyle = accentColor ? ` style="--category-accent: ${accentColor}"` : '';
+  const accent = categoryColors[category] || '';
+  const sectionStyle = accent ? ` style="--category-accent: ${accent}"` : '';
 
   const cards = categoryNotes
     .map((n) => {
-      const svgIcon = LOGOS[n.title] || '';
-      const cardAccentColor = categoryColors[n.category] || '';
-      const cardAccentStyle = cardAccentColor ? ` style="--category-accent: ${cardAccentColor}"` : '';
-      return `<a href="notes/${n.slug}.html" class="card" data-title="${n.title}"${cardAccentStyle}><div class="card-logo">${svgIcon}</div><h3>${n.title}</h3><p class="card-description">${n.description || ''}</p><div class="card-badges"><span class="card-category">${n.category}</span><span class="card-difficulty card-difficulty--${(n.difficulty || 'beginner').toLowerCase()}">${n.difficulty || ''}</span></div></a>`;
+      const svg = LOGOS[n.title] || '';
+      const cardAccent = categoryColors[n.category] || '';
+      const cardStyle = cardAccent ? ` style="--category-accent: ${cardAccent}"` : '';
+      return `<a href="notes/${n.slug}.html" class="card" data-title="${n.title}"${cardStyle}><div class="card-logo">${svg}</div><h3>${n.title}</h3><p class="card-description">${n.description || ''}</p><div class="card-badges"><span class="card-category">${n.category}</span><span class="card-difficulty card-difficulty--${(n.difficulty || 'beginner').toLowerCase()}">${n.difficulty || ''}</span></div></a>`;
     })
     .join('\n        ');
 
@@ -340,7 +319,7 @@ for (const [category, categoryNotes] of categoryMap) {
 </section>`;
 }
 
-// F. Home page build
+// home page
 const homeBody = homeTpl
   .replace(/\{\{SKILLS_BANNER\}\}/g, skillsBannerHtml)
   .replace(/\{\{CATEGORY_TABS\}\}/g, categoryTabsHtml)
@@ -358,19 +337,18 @@ const homePage = applyLayout(layoutTpl, {
   socialGithub: site.social.github,
   socialFacebook: site.social.facebook,
 });
+fs.writeFileSync(path.join(DIST, 'index.html'), homePage, 'utf8');
 
-fs.writeFileSync(path.join(DIST_DIR, 'index.html'), homePage, 'utf8');
-
-// G. Search index
+// search index
 const searchIndex = builtNotes.map(n => ({
   slug: n.slug,
   title: n.title,
   category: n.category,
   content: n.plainText.slice(0, 500),
 }));
-fs.writeFileSync(path.join(DIST_DIR, 'search-index.json'), JSON.stringify(searchIndex));
+fs.writeFileSync(path.join(DIST, 'search-index.json'), JSON.stringify(searchIndex));
 
-// H. 404 page
+// 404
 const notFoundBody = notFoundTpl.replace(/\{\{BASE_PATH\}\}/g, './');
 const notFoundPage = applyLayout(layoutTpl, {
   pageTitle: '404 — Pronote',
@@ -384,15 +362,15 @@ const notFoundPage = applyLayout(layoutTpl, {
   socialGithub: site.social.github,
   socialFacebook: site.social.facebook,
 });
-fs.writeFileSync(path.join(DIST_DIR, '404.html'), notFoundPage, 'utf8');
+fs.writeFileSync(path.join(DIST, '404.html'), notFoundPage, 'utf8');
 
-
-copyDir(path.join(PROJECT_ROOT, 'src', 'css'), path.join(DIST_DIR, 'css'));
-copyDir(path.join(PROJECT_ROOT, 'src', 'js'), path.join(DIST_DIR, 'js'));
+// static assets
+copyDir(path.join(PROJECT_ROOT, 'src', 'css'), path.join(DIST, 'css'));
+copyDir(path.join(PROJECT_ROOT, 'src', 'js'), path.join(DIST, 'js'));
 
 const imagesSource = path.join(site.sourceDir, 'Images');
 if (fs.existsSync(imagesSource)) {
-  copyDir(imagesSource, path.join(DIST_DIR, 'images'));
+  copyDir(imagesSource, path.join(DIST, 'images'));
   console.log('  Copied images directory.');
 }
 
