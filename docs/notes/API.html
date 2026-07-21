@@ -94,7 +94,7 @@
     </div>
   </div>
   <h1 class="note-title">API</h1>
-  <p class="note-meta">Last updated: July 20, 2026 &middot; <span class="note-version-badge">v1</span></p>
+  <p class="note-meta">Last updated: July 21, 2026 &middot; <span class="note-version-badge">v1</span></p>
   <div class="note-content">
     <h1>INTRODUCTION TO API</h1>
 <h2>Application Programming Interface (API)</h2>
@@ -222,6 +222,11 @@
 <p>You paste the <strong>JSON</strong> on the <code>jsonData</code>.</p>
 <p><em>then you can now use the JSON on the ejs by calling it <code>&lt;% array.category.division.name %&gt;</code></em></p>
 <hr>
+<h2>res.send vs res.render</h2>
+<p><code>res.send()</code> — Sends raw data directly to the browser. It can be a string, object, or HTML.<br>Its not just for files, you can send anything with it.</p>
+<p><code>res.render()</code> — Renders a template like EJS and passes data as JS objects to it.</p>
+<p><em>If you are using a template like EJS, use <code>res.render</code>.<br>If you just want to display raw data on the browser, use <code>res.send</code>.</em></p>
+<hr>
 <h2>SERVER-SIDE API REQUEST USING NATIVE NODE &amp; EJS</h2>
 <h3>Making requests from your server using Node and Axios</h3>
 <p>What if we want to create an app where we need our server to make the API request?<br>This is one of the most common needs in node and express Backend.</p>
@@ -326,6 +331,14 @@ app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quo
   }
 })</code></pre></div>
 <p><em>It has been sliced noticeable short.</em></p>
+<h3>async/await is REQUIRED</h3>
+<p>Notice the <code>async</code> on the route callback and <code>await</code> on <code>axios.get()</code>.<br>Both are <strong>required</strong> when using Axios inside a route.</p>
+<ul>
+<li>Without <code>async</code> on the callback, using <code>await</code> will throw a <strong>syntax error</strong>.</li>
+<li>Without <code>await</code> on <code>axios.get()</code>, <code>response</code> will be a <strong>Promise</strong> not the actual response.<br>So <code>response.data</code> will be <code>undefined</code>.</li>
+</ul>
+<p><em>Always remember: <code>async</code> on the function, <code>await</code> on the axios call.</em></p>
+<hr>
 <h3>Why Axios is shorter than Native Node</h3>
 <ol>
 <li><p><strong>No manual JSON parsing</strong> -- Axios automatically detects JSON responses and parses them into JS Objects for you. With native node you had to do <code>JSON.parse(data)</code> yourself.</p>
@@ -353,6 +366,11 @@ app.<span class="hljs-title function_">get</span>(<span class="hljs-string">&quo
 <div class="code-block-wrapper"><span class="code-lang-label">JS</span><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs language-js"><span class="hljs-keyword">const</span> result = response.<span class="hljs-property">data</span>;
 result.<span class="hljs-property">activity</span>    <span class="hljs-comment">// works</span>
 result.<span class="hljs-property">type</span>        <span class="hljs-comment">// works</span></code></pre></div>
+<h3>JSON.stringify for EJS Display</h3>
+<p>Even though Axios already parses JSON into a JS Object for you,<br><strong>EJS cannot display a JS Object as text</strong>. It will show <code>[object Object]</code>.</p>
+<p>So when passing data to <code>res.render</code> you need to convert it back to a readable string:</p>
+<div class="code-block-wrapper"><span class="code-lang-label">JS</span><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs language-js">res.<span class="hljs-title function_">render</span>(<span class="hljs-string">&quot;index.ejs&quot;</span>, { <span class="hljs-attr">content</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(response.<span class="hljs-property">data</span>) });</code></pre></div>
+<p><em>Axios handles <code>JSON → JS Object</code> for you (no <code>JSON.parse</code> needed),<br>but displaying that object in EJS requires <code>JSON.stringify</code> to turn it back into a readable string.</em></p>
 <h1>API AUTHENTICATION</h1>
 <h2>Authenticating yourself with the API Provider.</h2>
 <p>This is the ability to prove that you have the rights to access their particular API.</p>
@@ -427,6 +445,15 @@ result.<span class="hljs-property">type</span>        <span class="hljs-comment"
 <h4>Authorization Generates a Header</h4>
 <p>Quick Note on the Authorization on Postman is that when putting a request with username and password,<br>Postman will <strong>generate the header</strong> which contains all of the things on &quot;<em>Headers Image</em>&quot;</p>
 <p>Great thing about libraries like <strong>Axios</strong> is that it can <em>generate the header</em> by just providing username and password.</p>
+<h4>Basic Auth in Axios Code</h4>
+<p>This is how you do Basic Authentication with Axios.<br>You just pass an <code>auth</code> object as the second argument:</p>
+<div class="code-block-wrapper"><span class="code-lang-label">JS</span><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs language-js"><span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> axios.<span class="hljs-title function_">get</span>(<span class="hljs-variable constant_">API_URL</span> + <span class="hljs-string">&quot;all?page=2&quot;</span>, {
+  <span class="hljs-attr">auth</span>: {
+    <span class="hljs-attr">username</span>: <span class="hljs-string">&quot;yourUsername&quot;</span>,
+    <span class="hljs-attr">password</span>: <span class="hljs-string">&quot;yourPassword&quot;</span>,
+  },
+});</code></pre></div>
+<p><em>Axios will take care of encoding it to Base64 and putting it in the Authorization header for you.</em></p>
 <p><strong>If you were to check the &quot;Headers&quot;</strong></p>
 <p>Next to Authorization is <em>Basic cmFuZG9tamFkZTpyYW5kb21QYXNz</em><br>Which means Basic Authentication then your username:password in base64.</p>
 <p><code>cmFuZG9tamFkZTpyYW5kb21QYXNz</code> to <code>randomjade:randomPass</code></p>
@@ -438,6 +465,72 @@ result.<span class="hljs-property">type</span>        <span class="hljs-comment"
 <p>if you have a user, they can <strong>authenticate</strong> themselves with your service.<br>Which means they are <em>logging in</em> or <em>registering</em>.</p>
 <h4>Authorization</h4>
 <p>It&#39;s simply a client who is allowed to use your service with an <strong>API Key</strong><br>that might be associated with a user, in which case they are getting <em>authenticated</em><br>themselves to get the API Key to <strong>authorize</strong> themselves to use their API.<br>or no need for getting authenticated If you got hold of the API Key and authorize yourself<br>with the API Provider.</p>
+<p>Thats why alot of PublicAPI uses API Key, because its easier to track the usage per API Key.</p>
+<p><strong>EXAMPLE OF API KEY USAGE</strong></p>
+<p><strong>GET/generate-api-key</strong><br>Generates a new API key.</p>
+<p><strong>Example Request:</strong></p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-built_in">GET</span> https:<span class="hljs-comment">//secrets-api.appbrewery.com/generate-api-key</span></code></pre></div>
+<p><strong>Example Response:</strong></p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;apiKey&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;generated-api-key&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre></div>
+<p><em>API-Docs: <a href="https://secrets-api.appbrewery.com/">https://secrets-api.appbrewery.com/</a></em></p>
+<p>Now that you got the key lets look at how to use it.</p>
+<p>In here we will use the filter route which requires the API Key as <em>query-parameter</em>.<br><img src="./../images/usingapikey.png" alt="UsingAPIKey"></p>
+<p> If you try to access the filter without a key = <code>https://secrets-api.appbrewery.com/filter?score=8</code><br> You will get this:<code>{&quot;error&quot;: &quot;API Key does not exist.&quot;}</code></p>
+<hr>
+<h3>Token Based Authentication</h3>
+<p>  The users can create an account with username and password.<br>  Which will generate tokens and that tokens are the one used to generate an API key.</p>
+<p>  What this means is that <strong>API</strong> <em>doesn&#39;t get involve with the account</em>, only the <strong>tokens</strong> can <em>interact</em> with it.<br>  So <em>attackers cannot get hold of your information</em>. Unlike Basic authentication which can be targeted<br>  since the username:password is passed through header.</p>
+<p>  This goes to show that <strong>Token Based Authentication</strong> is the <em>safest way</em> to use <strong>API</strong>.</p>
+<p>Token Based Authentication as <strong>OAuth</strong> and <strong>OAuth2.0</strong> is considered as the <strong>industry standard</strong>.</p>
+<p><img src="./../images/TokenBasedAuthentication.drawio.png" alt="TokenBasedAuthenticationDiagram"><br>Client will create an account, then the API Provider will generate tokens for your account<br>which will be used to interact with the API.</p>
+<h4>How to get Token:</h4>
+<p>based on the API Docs of <em><a href="https://secrets-api.appbrewery.com/">https://secrets-api.appbrewery.com/</a></em></p>
+<ul>
+<li><strong>Bearer Token Authentication</strong> is required for some endpoints.<br>Use your username and password to get a token obtained from the <em>/get-auth-token</em> endpoint.</li>
+</ul>
+<p> For getting the token its basically the same action as Basic authentication.</p>
+<hr>
+<p><strong>POST</strong> <em>/get-auth-token</em><br>Generates an authentication token for a user. If the user does not exist or the password is incorrect, it will return an error.</p>
+<p>Request Body: This is where u put the account info, as request body.</p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;The username of the registered user.&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;password&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;The password of the registered user.&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre></div>
+<p>Example Request:</p>
+<p><strong>POST</strong> <em><a href="https://secrets-api.appbrewery.com/get-auth-token">https://secrets-api.appbrewery.com/get-auth-token</a></em></p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;randomjade&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;password&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;randomPass&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre></div>
+<p>Example Response:</p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;token&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;9424b073-a47b-4197-b400-617f78b4b2a6&quot;</span> <span class="hljs-comment">//The generated Token.</span>
+<span class="hljs-punctuation">}</span></code></pre></div>
+<hr>
+<h4>HOW TO USE TOKENS</h4>
+<p><strong>GET</strong> <em>/secrets/{id}</em><br>Returns the secret with the specified ID. Bearer token authentication is required.</p>
+<p><strong>URL Parameters:</strong></p>
+<p>id: The ID of the secret to retrieve.</p>
+<p>Example Request:</p>
+<p><strong>GET</strong> <em><a href="https://secrets-api.appbrewery.com/secrets/1">https://secrets-api.appbrewery.com/secrets/1</a></em><br>Example Response:</p>
+<div class="code-block-wrapper"><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;secret&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;This is a secret.&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;emScore&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user123&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2022-10-01T12:34:56Z&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre></div>
+<p>But this will only work if you are authorized, in my case using Postman.<br>I had to go to Authorization and pick Bearer Token, then paste my Token, in ordered to be authorized to make requests.</p>
+<h4>Bearer Token in Axios Code</h4>
+<p>This is how you do Bearer Token Authentication with Axios.<br>You pass the token inside the <code>headers</code> object with <code>Authorization</code>:</p>
+<div class="code-block-wrapper"><span class="code-lang-label">JS</span><button class="code-copy-btn" aria-label="Copy code" title="Copy"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button><pre><code class="hljs language-js"><span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> axios.<span class="hljs-title function_">get</span>(<span class="hljs-variable constant_">API_URL</span> + <span class="hljs-string">&quot;secrets/42&quot;</span>, {
+  <span class="hljs-attr">headers</span>: {
+    <span class="hljs-title class_">Authorization</span>: <span class="hljs-string">`Bearer <span class="hljs-subst">${yourBearerToken}</span>`</span>,
+  },
+});</code></pre></div>
+<p><em>Its that simple. You just put <code>Bearer</code> followed by your token in the Authorization header.</em></p>
 <hr>
 
   </div>
